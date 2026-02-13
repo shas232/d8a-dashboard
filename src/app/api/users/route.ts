@@ -156,9 +156,19 @@ export async function GET() {
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error(err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("API Error:", message);
     return NextResponse.json(
-      { error: "Failed to fetch data" },
+      {
+        error: "Failed to fetch data",
+        detail: message,
+        hasEnvVars: {
+          FIREBASE_API_KEY: !!process.env.FIREBASE_API_KEY,
+          FIREBASE_REFRESH_TOKEN: !!process.env.FIREBASE_REFRESH_TOKEN,
+          D8A_ORG_ID: !!process.env.D8A_ORG_ID,
+          D8A_API_BASE: !!process.env.D8A_API_BASE,
+        },
+      },
       { status: 500 }
     );
   }

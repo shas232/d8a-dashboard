@@ -114,13 +114,14 @@ async function getIdToken(): Promise<string> {
   return data.id_token;
 }
 
-async function fetchAllUsers(token: string): Promise<D8AUser[]> {
+async function fetchAllUsers(token: string, startDate: string | null): Promise<D8AUser[]> {
   const allUsers: D8AUser[] = [];
   let offset = 0;
   const limit = 100;
 
   while (true) {
-    const url = `${process.env.D8A_API_BASE}/organizations/${process.env.D8A_ORG_ID}/users?limit=${limit}&offset=${offset}&sort=last_upload&tz=America%2FLos_Angeles`;
+    let url = `${process.env.D8A_API_BASE}/organizations/${process.env.D8A_ORG_ID}/users?limit=${limit}&offset=${offset}&sort=last_upload&tz=America%2FLos_Angeles`;
+    if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -137,10 +138,12 @@ async function fetchAllUsers(token: string): Promise<D8AUser[]> {
   return allUsers;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const startDate = searchParams.get("start_date");
     const token = await getIdToken();
-    const allUsers = await fetchAllUsers(token);
+    const allUsers = await fetchAllUsers(token, startDate);
     const filtered = allUsers.filter((u) => FILTERED_EMAILS.has(u.email));
 
     const totalUsers = filtered.length;

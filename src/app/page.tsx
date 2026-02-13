@@ -71,11 +71,18 @@ export default function Dashboard() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"dashboard" | "users">("dashboard");
+  const [startDate, setStartDate] = useState("");
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (date?: string) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/users");
+      const dateParam = date ?? startDate;
+      let url = "/api/users";
+      if (dateParam) {
+        const isoDate = new Date(dateParam + "T00:00:00").toISOString();
+        url += `?start_date=${encodeURIComponent(isoDate)}`;
+      }
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       setData(json);
@@ -85,7 +92,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [startDate]);
 
   useEffect(() => {
     fetchData();
@@ -260,8 +267,31 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="mb-4">
+        {/* Date Filter + Search */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-zinc-600 dark:text-zinc-400 whitespace-nowrap">From:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                fetchData(e.target.value);
+              }}
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500"
+            />
+            {startDate && (
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  fetchData("");
+                }}
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Search users..."

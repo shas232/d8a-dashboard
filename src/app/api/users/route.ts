@@ -103,7 +103,14 @@ async function getIdToken(): Promise<string> {
     }
   );
   const data = await res.json();
-  if (!data.id_token) throw new Error("Failed to refresh token");
+  if (!data.id_token) {
+    throw new Error(
+      `Failed to refresh token. Status: ${res.status}. ` +
+      `Has API key: ${!!process.env.FIREBASE_API_KEY}. ` +
+      `Has refresh token: ${!!process.env.FIREBASE_REFRESH_TOKEN}. ` +
+      `Response: ${JSON.stringify(data).slice(0, 200)}`
+    );
+  }
   return data.id_token;
 }
 

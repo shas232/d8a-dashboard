@@ -143,7 +143,7 @@ export default function Dashboard() {
         <div className="rounded-lg bg-red-50 p-6 text-center dark:bg-red-900/20">
           <p className="text-red-700 dark:text-red-400">{error}</p>
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
           >
             Retry
@@ -183,7 +183,7 @@ export default function Dashboard() {
             Manage Users
           </button>
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
           >

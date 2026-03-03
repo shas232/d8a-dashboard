@@ -1,82 +1,35 @@
 import { NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
-const FILTERED_EMAILS = new Set([
-  "c1_00695070@op.micro-agi.com",
-  "c1_60903228@op.micro-agi.com",
-  "c1_70996366@op.micro-agi.com",
-  "c1_41284911@op.micro-agi.com",
-  "c1_99172099@op.micro-agi.com",
-  "c1_51659213@op.micro-agi.com",
-  "c1_11895557@op.micro-agi.com",
-  "c1_77501884@op.micro-agi.com",
-  "c1_80646651@op.micro-agi.com",
-  "c1_61492431@op.micro-agi.com",
-  "c1_91282033@op.micro-agi.com",
-  "c1_28082123@op.micro-agi.com",
-  "c1_53309119@op.micro-agi.com",
-  "c1_57457232@op.micro-agi.com",
-  "c1_58844194@op.micro-agi.com",
-  "c1_01937485@op.micro-agi.com",
-  "c1_22760194@op.micro-agi.com",
-  "c1_64124857@op.micro-agi.com",
-  "c1_93991840@op.micro-agi.com",
-  "c1_38236023@op.micro-agi.com",
-  "c1_11226011@op.micro-agi.com",
-  "c1_13080118@op.micro-agi.com",
-  "c1_36548915@op.micro-agi.com",
-  "c1_89734684@op.micro-agi.com",
-  "c1_53958268@op.micro-agi.com",
-  "c1_15241670@op.micro-agi.com",
-  "c1_21916331@op.micro-agi.com",
-  "c1_56113658@op.micro-agi.com",
-  "c1_18075359@op.micro-agi.com",
-  "c1_20833689@op.micro-agi.com",
-  "c1_61815891@op.micro-agi.com",
-  "c1_07672642@op.micro-agi.com",
-  "c1_14271322@op.micro-agi.com",
-  "c1_66881236@op.micro-agi.com",
-  "c1_75852147@op.micro-agi.com",
-  "c1_18135622@op.micro-agi.com",
-  "c1_25228714@op.micro-agi.com",
-  "c1_43862480@op.micro-agi.com",
-  "c1_60974777@op.micro-agi.com",
-  "c1_55116654@op.micro-agi.com",
-  "c1_09928203@op.micro-agi.com",
-  "c1_50635480@op.micro-agi.com",
-  "c1_45270313@op.micro-agi.com",
-  "c1_50186901@op.micro-agi.com",
-  "c1_93500508@op.micro-agi.com",
-  "c1_55350273@op.micro-agi.com",
-  "c1_48183117@op.micro-agi.com",
-  "c1_42526406@op.micro-agi.com",
-  "c1_19177086@op.micro-agi.com",
-  "c1_76297539@op.micro-agi.com",
-  "c1_30990773@op.micro-agi.com",
-  "c1_52281883@op.micro-agi.com",
-  "c1_59323644@op.micro-agi.com",
-  "c1_26648865@op.micro-agi.com",
-  "c1_52090027@op.micro-agi.com",
-  "c1_44955759@op.micro-agi.com",
-  "c1_79708178@op.micro-agi.com",
-  "c1_48039753@op.micro-agi.com",
-  "c1_12543131@op.micro-agi.com",
-  "c1_86183692@op.micro-agi.com",
-  "c1_91231581@op.micro-agi.com",
-  "c1_72359269@op.micro-agi.com",
-  "c1_22007073@op.micro-agi.com",
-  "c1_41214000@op.micro-agi.com",
-  "c1_07357973@op.micro-agi.com",
-  "c1_14513633@op.micro-agi.com",
-  "c1_41101357@op.micro-agi.com",
-  "c1_85273275@op.micro-agi.com",
-  "c1_30927241@op.micro-agi.com",
-  "c1_72779800@op.micro-agi.com",
-  "c1_27875091@op.micro-agi.com",
-  "c1_98088216@op.micro-agi.com",
-  "c1_05304642@op.micro-agi.com",
-  "c1_09273087@op.micro-agi.com",
-  "c1_08961982@op.micro-agi.com",
-]);
+const EMAILS_URL =
+  "https://raw.githubusercontent.com/shas232/d8a-dashboard/main/emails.json";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let cachedEmails: Set<string> | null = null;
+let cacheTimestamp = 0;
+
+async function getFilteredEmails(): Promise<Set<string>> {
+  if (cachedEmails && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedEmails;
+  }
+
+  try {
+    const res = await fetch(EMAILS_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`GitHub fetch failed: ${res.status}`);
+    const emails: string[] = await res.json();
+    cachedEmails = new Set(emails.map((e) => e.toLowerCase().trim()));
+    cacheTimestamp = Date.now();
+    return cachedEmails;
+  } catch {
+    // Fallback to local emails.json
+    const raw = readFileSync(join(process.cwd(), "emails.json"), "utf-8");
+    const emails: string[] = JSON.parse(raw);
+    cachedEmails = new Set(emails.map((e) => e.toLowerCase().trim()));
+    cacheTimestamp = Date.now();
+    return cachedEmails;
+  }
+}
 
 interface D8AUser {
   email: string;
@@ -144,7 +97,8 @@ export async function GET(req: Request) {
     const startDate = searchParams.get("start_date");
     const token = await getIdToken();
     const allUsers = await fetchAllUsers(token, startDate);
-    const filtered = allUsers.filter((u) => FILTERED_EMAILS.has(u.email));
+    const filteredEmails = await getFilteredEmails();
+    const filtered = allUsers.filter((u) => filteredEmails.has(u.email));
 
     const totalUsers = filtered.length;
     const activeUsers = filtered.filter((u) => u.uploadCount > 0).length;
